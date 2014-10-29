@@ -3,6 +3,11 @@
 #define TMM_CPU_CURRENT_mA 2
 #define TMM_FPGA_CURRENT_mA 3
 
+#define TMM_VCCO0_mV 4
+#define TMM_VCCO1_mV 5
+#define TMM_VCCO2_mV 6
+#define TMM_VDDR_mV 7
+
 /* Returns non-zero on error (as in errno.h). Result is stored
  * into "value" on success.
  */
