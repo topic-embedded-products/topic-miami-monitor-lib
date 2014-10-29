@@ -1,5 +1,5 @@
 #include "topic-miami-monitor-lib.h"
-#include <error.h>
+#include <string.h>
 #include <stdio.h>
 
 struct monitor_item {
@@ -14,11 +14,10 @@ static void show_item(const struct monitor_item* m)
 	int value;
 
 	result = get_topic_miami_monitor_value(m->item, &value);
-	if (result != 0) {
-		error(0, -result, "%s: ERROR %d", m->name, result);
-		return;
-	}
-	printf("%s: %d %s\n", m->name, value, m->unit);
+	if (result != 0)
+		printf("%16s: ERROR %d: %s\n", m->name, result, strerror(-result));
+	else
+		printf("%16s: %5d %s\n", m->name, value, m->unit);
 }
 
 const struct monitor_item items[] = {
