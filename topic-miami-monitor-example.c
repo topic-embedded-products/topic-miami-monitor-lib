@@ -16,8 +16,10 @@ static void show_item(const struct monitor_item* m)
 	result = get_topic_miami_monitor_value(m->item, &value);
 	if (result != 0)
 		printf("%16s: ERROR %d: %s\n", m->name, result, strerror(-result));
-	else
+	else if (m->unit)
 		printf("%16s: %5d %s\n", m->name, value, m->unit);
+	else
+		printf("%16s: %5s\n", m->name, value ? "YES" : "NO");
 }
 
 const struct monitor_item items[] = {
@@ -29,6 +31,8 @@ const struct monitor_item items[] = {
 	{ TMM_VCCO1_mV, "VCCO1", "mV" },
 	{ TMM_VCCO2_mV, "VCCO2", "mV" },
 	{ TMM_VDDR_mV, "VDDR", "mV" },
+	{ TMM_VPRESENT, "Carrier board", NULL },
+	{ TMM_DEBUGPRESENT, "Debug board", NULL },
 };
 
 int main()

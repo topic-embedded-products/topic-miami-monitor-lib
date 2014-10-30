@@ -8,6 +8,9 @@
 #define TMM_VCCO2_mV 6
 #define TMM_VDDR_mV 7
 
+#define TMM_VPRESENT 8
+#define TMM_DEBUGPRESENT 9
+
 /* Returns non-zero on error (as in errno.h). Result is stored
  * into "value" on success.
  */

@@ -76,6 +76,50 @@ static int raw_to_millivolt(const char* filename, int* value)
 	return 0;
 }
 
+int set_gpio_mode_input(int index)
+{
+	char fn[64];
+	FILE* f;
+
+	f = fopen("/sys/class/gpio/export", "w");
+	if (!f)
+		return -errno;
+	sprintf(fn, "%d", index);
+	fputs(fn, f);
+	fclose(f);
+	
+	sprintf(fn, "/sys/class/gpio/gpio%d/direction", index);
+	f = fopen(fn, "w");
+	if (!f)
+		return -errno;
+	fputs("in", f);
+	fclose(f);
+
+	return 0;
+}
+
+int get_gpio_value(int index, int* value)
+{
+	char fn[64];
+	FILE* f;
+	int r;
+
+	sprintf(fn, "/sys/class/gpio/gpio%d/value", index);
+	f = fopen(fn, "r");
+	if (!f) {
+		r = set_gpio_mode_input(index);
+		if (r)
+			return r;
+		f = fopen(fn, "r");
+		if (!f)
+			return -errno;
+	}
+	r = fscanf(f, "%d", value);
+	if (r != 1)
+		return (r < 0) ? r : -EINVAL;
+	fclose(f);
+}
+
 int get_topic_miami_monitor_value(int item, int* value)
 {
 	switch (item) {
@@ -95,6 +139,10 @@ int get_topic_miami_monitor_value(int item, int* value)
 		return raw_to_millivolt(sysfile_ad2999_voltage_2_raw, value);
 	case TMM_VDDR_mV:
 		return raw_to_millivolt(sysfile_ad2999_voltage_3_raw, value);
+	case TMM_VPRESENT:
+		return get_gpio_value(252+2, value);
+	case TMM_DEBUGPRESENT:
+		return get_gpio_value(252+3, value);
 	}
 	return -EINVAL;
 }
