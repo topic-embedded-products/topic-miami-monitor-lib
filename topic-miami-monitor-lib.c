@@ -1,15 +1,14 @@
 #include "topic-miami-monitor-lib.h"
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
-static const char sysfile_som_vcc[] =
-	"/sys/class/hwmon/hwmon0/device/vcc";
-static const char sysfile_som_temp[] =
-	"/sys/class/hwmon/hwmon0/device/temp_int";
-static const char sysfile_cpu_current[] =
-	"/sys/class/hwmon/hwmon0/device/v1v2_diff";
-static const char sysfile_fpga_current[] =
-	"/sys/class/hwmon/hwmon0/device/v3v4_diff";
+static const char sysfile_ltc2990_pattern[] =
+	"/sys/class/hwmon/hwmon%d/device/%s";
+static char* sysfile_som_vcc = NULL;
+static char* sysfile_som_temp = NULL;
+static char* sysfile_cpu_current = NULL;
+static char* sysfile_fpga_current = NULL;
 
 static float ad2999_voltage_scale = 0;
 static const char sysfile_ad2999_voltage_scale[] =
@@ -76,7 +75,7 @@ static int raw_to_millivolt(const char* filename, int* value)
 	return 0;
 }
 
-int set_gpio_mode_input(int index)
+static int set_gpio_mode_input(int index)
 {
 	char fn[64];
 	FILE* f;
@@ -98,7 +97,7 @@ int set_gpio_mode_input(int index)
 	return 0;
 }
 
-int get_gpio_value(int index, int* value)
+static int get_gpio_value(int index, int* value)
 {
 	char fn[64];
 	FILE* f;
@@ -120,16 +119,70 @@ int get_gpio_value(int index, int* value)
 	fclose(f);
 }
 
+static int find_ltc2990_sysfiles()
+{
+	int index;
+	FILE* f;
+	char buffer[128];
+	int status;
+
+	status = -ENODEV;
+	for (index = 0; index < 10; ++index) {
+		sprintf(buffer, sysfile_ltc2990_pattern, index, "name");
+		f = fopen(buffer, "r");
+		if (f) {
+			if (fgets(buffer, sizeof(buffer), f)) {
+				if (strncmp(buffer, "ltc2990", 7) == 0) {
+					sprintf(buffer, sysfile_ltc2990_pattern, index, "temp_int");
+					sysfile_som_temp = strdup(buffer);
+					sprintf(buffer, sysfile_ltc2990_pattern, index, "v1v2_diff");
+					sysfile_cpu_current = strdup(buffer);
+					sprintf(buffer, sysfile_ltc2990_pattern, index, "v3v4_diff");
+					sysfile_fpga_current = strdup(buffer);
+					sprintf(buffer, sysfile_ltc2990_pattern, index, "vcc");
+					sysfile_som_vcc = strdup(buffer);
+					status = 0;
+				}
+			}
+			fclose(f);
+			if (status == 0)
+				return 0;
+		}
+	}
+	return status;
+}
+
+static int find_ltc2990()
+{
+	if (sysfile_som_vcc)
+		return 0;
+	return find_ltc2990_sysfiles();
+}
+
 int get_topic_miami_monitor_value(int item, int* value)
 {
+	int status;
+
 	switch (item) {
 	case TMM_MIAMI_VCC_mV:
+		status = find_ltc2990();
+		if (status)
+			return status;
 		return divide_by(sysfile_som_vcc, value, 1000);
 	case TMM_MIAMI_TEMP_mC:
+		status = find_ltc2990();
+		if (status)
+			return status;
 		return read_sys_file_int(sysfile_som_temp, value);
 	case TMM_CPU_CURRENT_mA:
+		status = find_ltc2990();
+		if (status)
+			return status;
 		return divide_by(sysfile_cpu_current, value, 5);
 	case TMM_FPGA_CURRENT_mA:
+		status = find_ltc2990();
+		if (status)
+			return status;
 		return divide_by(sysfile_fpga_current, value, 5);
 	case TMM_VCCO0_mV:
 		return raw_to_millivolt(sysfile_ad2999_voltage_0_raw, value);
