@@ -1,7 +1,9 @@
 #include "topic-miami-monitor-lib.h"
+#include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
 
 static const char sysfile_ltc2990_pattern[] =
 	"/sys/class/hwmon/hwmon%d/device/%s";
@@ -21,6 +23,8 @@ static const char sysfile_ad2999_voltage_2_raw[] =
 	"/sys/bus/iio/devices/iio:device0/in_voltage2_raw";
 static const char sysfile_ad2999_voltage_3_raw[] =
 	"/sys/bus/iio/devices/iio:device0/in_voltage3_raw";
+
+static int gpio_pca9536_base = -1;
 
 static int read_sys_file_int(const char* filename, int* value)
 {
@@ -159,6 +163,53 @@ static int find_ltc2990()
 	return find_ltc2990_sysfiles();
 }
 
+static const char sys_class_gpio[] = "/sys/class/gpio";
+
+static int find_gpiochip_pca9536(const struct dirent* entry)
+{
+	int result = -ENODEV;
+	char buffer[80];
+	FILE* f;
+	if (strncmp("gpiochip", entry->d_name, 8))
+		return -ENODEV;
+	sprintf(buffer, "%s/%s/label", sys_class_gpio, entry->d_name);
+	f = fopen(buffer, "r");
+	if (!f)
+		return -ENODEV;
+	if (fgets(buffer, sizeof(buffer), f)) {
+		/* Check if label matches */
+		if (strncmp("pca9536", buffer, 7) == 0) {
+			fclose(f);
+			sprintf(buffer, "%s/%s/base", sys_class_gpio, entry->d_name);
+			f = fopen(buffer, "r");
+			if (!f)
+				return -ENODEV;
+			fscanf(f, "%d", &result);
+		}
+	}
+	fclose(f);
+	return result;
+}
+
+static int find_pca9536()
+{
+	if (gpio_pca9536_base < 0) {
+		DIR* handle = opendir(sys_class_gpio);
+		int result = -ENODEV;
+		struct dirent* entry;
+		if (!handle)
+			return -errno;
+		while ((entry = readdir(handle)) != NULL) {
+			result = find_gpiochip_pca9536(entry);
+			if (result >= 0) /* found it */
+				break;
+		}
+		closedir(handle);
+		gpio_pca9536_base = result;
+	}
+	return gpio_pca9536_base;
+}
+
 int get_topic_miami_monitor_value(int item, int* value)
 {
 	int status;
@@ -193,9 +244,15 @@ int get_topic_miami_monitor_value(int item, int* value)
 	case TMM_VDDR_mV:
 		return raw_to_millivolt(sysfile_ad2999_voltage_3_raw, value);
 	case TMM_VPRESENT:
-		return get_gpio_value(252+2, value);
+		status = find_pca9536();
+		if (status < 0)
+			return status;
+		return get_gpio_value(status + 2, value);
 	case TMM_DEBUGPRESENT:
-		return get_gpio_value(252+3, value);
+		status = find_pca9536();
+		if (status < 0)
+			return status;
+		return get_gpio_value(status + 3, value);
 	}
 	return -EINVAL;
 }
