@@ -33,7 +33,7 @@
 #include <sys/types.h>
 
 static const char sysfile_ltc2990_pattern[] =
-	"/sys/class/hwmon/hwmon%d/device/%s";
+	"/sys/class/hwmon/hwmon%d/%s";
 static char* sysfile_som_vcc = NULL;
 static char* sysfile_som_temp = NULL;
 static char* sysfile_cpu_current = NULL;
@@ -164,13 +164,13 @@ static int find_ltc2990_sysfiles()
 		if (f) {
 			if (fgets(buffer, sizeof(buffer), f)) {
 				if (strncmp(buffer, "ltc2990", 7) == 0) {
-					sprintf(buffer, sysfile_ltc2990_pattern, index, "temp_int");
+					sprintf(buffer, sysfile_ltc2990_pattern, index, "temp1_input");
 					sysfile_som_temp = strdup(buffer);
-					sprintf(buffer, sysfile_ltc2990_pattern, index, "v1v2_diff");
+					sprintf(buffer, sysfile_ltc2990_pattern, index, "curr1_input");
 					sysfile_cpu_current = strdup(buffer);
-					sprintf(buffer, sysfile_ltc2990_pattern, index, "v3v4_diff");
+					sprintf(buffer, sysfile_ltc2990_pattern, index, "curr2_input");
 					sysfile_fpga_current = strdup(buffer);
-					sprintf(buffer, sysfile_ltc2990_pattern, index, "vcc");
+					sprintf(buffer, sysfile_ltc2990_pattern, index, "in0_input");
 					sysfile_som_vcc = strdup(buffer);
 					status = 0;
 				}
@@ -246,7 +246,7 @@ int get_topic_miami_monitor_value(int item, int* value)
 		status = find_ltc2990();
 		if (status)
 			return status;
-		return divide_by(sysfile_som_vcc, value, 1000);
+		return read_sys_file_int(sysfile_som_vcc, value);
 	case TMM_MIAMI_TEMP_mC:
 		status = find_ltc2990();
 		if (status)
