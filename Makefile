@@ -1,5 +1,5 @@
 topic-miami-monitor-example: topic-miami-monitor-example.o topic-miami-monitor-lib.o
-	$(CC) -o $@ topic-miami-monitor-example.o topic-miami-monitor-lib.o
+	$(CC) $(LDFLAGS) -o $@ topic-miami-monitor-example.o topic-miami-monitor-lib.o
 
 topic-miami-monitor-lib.o: topic-miami-monitor-lib.c topic-miami-monitor-lib.h
 
