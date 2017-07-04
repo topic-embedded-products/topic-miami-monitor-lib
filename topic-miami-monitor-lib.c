@@ -40,16 +40,16 @@ static char* sysfile_som_temp = NULL;
 static char* sysfile_cpu_current = NULL;
 static char* sysfile_fpga_current = NULL;
 
-static float ad2999_voltage_scale = 0;
-static const char sysfile_ad2999_voltage_scale[] =
+static float ad7999_voltage_scale = 0;
+static const char sysfile_ad7999_voltage_scale[] =
 	"/sys/bus/iio/devices/iio:device0/in_voltage_scale";
-static const char sysfile_ad2999_voltage_0_raw[] =
+static const char sysfile_ad7999_voltage_0_raw[] =
 	"/sys/bus/iio/devices/iio:device0/in_voltage0_raw";
-static const char sysfile_ad2999_voltage_1_raw[] =
+static const char sysfile_ad7999_voltage_1_raw[] =
 	"/sys/bus/iio/devices/iio:device0/in_voltage1_raw";
-static const char sysfile_ad2999_voltage_2_raw[] =
+static const char sysfile_ad7999_voltage_2_raw[] =
 	"/sys/bus/iio/devices/iio:device0/in_voltage2_raw";
-static const char sysfile_ad2999_voltage_3_raw[] =
+static const char sysfile_ad7999_voltage_3_raw[] =
 	"/sys/bus/iio/devices/iio:device0/in_voltage3_raw";
 
 static int gpio_pca9536_base = -1;
@@ -94,16 +94,16 @@ static int raw_to_millivolt(const char* filename, int* value)
 {
 	int r;
 
-	if (!ad2999_voltage_scale) {
-		r = read_sys_file_float(sysfile_ad2999_voltage_scale, &ad2999_voltage_scale);
+	if (!ad7999_voltage_scale) {
+		r = read_sys_file_float(sysfile_ad7999_voltage_scale, &ad7999_voltage_scale);
 		if (r)
 			return r;
-		ad2999_voltage_scale *= 1.25f; /* 5k/20k divider */
+		ad7999_voltage_scale *= 1.25f; /* 5k/20k divider */
 	}
 	r = read_sys_file_int(filename, value);
 	if (r)
 		return r;
-	*value = (int)(*value * ad2999_voltage_scale);
+	*value = (int)(*value * ad7999_voltage_scale);
 	return 0;
 }
 
@@ -267,13 +267,13 @@ int get_topic_miami_monitor_value(int item, int* value)
 			return status;
 		return divide_by(sysfile_fpga_current, value, 5);
 	case TMM_VCCO0_mV:
-		return raw_to_millivolt(sysfile_ad2999_voltage_0_raw, value);
+		return raw_to_millivolt(sysfile_ad7999_voltage_0_raw, value);
 	case TMM_VCCO1_mV:
-		return raw_to_millivolt(sysfile_ad2999_voltage_1_raw, value);
+		return raw_to_millivolt(sysfile_ad7999_voltage_1_raw, value);
 	case TMM_VCCO2_mV:
-		return raw_to_millivolt(sysfile_ad2999_voltage_2_raw, value);
+		return raw_to_millivolt(sysfile_ad7999_voltage_2_raw, value);
 	case TMM_VDDR_mV:
-		return raw_to_millivolt(sysfile_ad2999_voltage_3_raw, value);
+		return raw_to_millivolt(sysfile_ad7999_voltage_3_raw, value);
 	case TMM_VPRESENT:
 		status = find_pca9536();
 		if (status < 0)
