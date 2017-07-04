@@ -26,6 +26,7 @@
  */
 
 #include "topic-miami-monitor-lib.h"
+#include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
@@ -164,15 +165,18 @@ static int find_ltc2990_sysfiles()
 		if (f) {
 			if (fgets(buffer, sizeof(buffer), f)) {
 				if (strncmp(buffer, "ltc2990", 7) == 0) {
-					sprintf(buffer, sysfile_ltc2990_pattern, index, "temp1_input");
-					sysfile_som_temp = strdup(buffer);
 					sprintf(buffer, sysfile_ltc2990_pattern, index, "curr1_input");
-					sysfile_cpu_current = strdup(buffer);
-					sprintf(buffer, sysfile_ltc2990_pattern, index, "curr2_input");
-					sysfile_fpga_current = strdup(buffer);
-					sprintf(buffer, sysfile_ltc2990_pattern, index, "in0_input");
-					sysfile_som_vcc = strdup(buffer);
-					status = 0;
+					/* Check that the LTC is in current measurement mode */
+					if (access(buffer, F_OK) == 0) {
+						sysfile_cpu_current = strdup(buffer);
+						sprintf(buffer, sysfile_ltc2990_pattern, index, "curr2_input");
+						sysfile_fpga_current = strdup(buffer);
+						sprintf(buffer, sysfile_ltc2990_pattern, index, "temp1_input");
+						sysfile_som_temp = strdup(buffer);
+						sprintf(buffer, sysfile_ltc2990_pattern, index, "in0_input");
+						sysfile_som_vcc = strdup(buffer);
+						status = 0;
+					}
 				}
 			}
 			fclose(f);
